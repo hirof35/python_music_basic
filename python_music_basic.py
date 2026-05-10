@@ -1,67 +1,89 @@
 import pygame
 import os
+import sys
 
-# Pygameの初期化
-pygame.init()
-pygame.mixer.init()
+class MusicPlayer:
+    def __init__(self, folder_path):
+        pygame.init()
+        pygame.mixer.init()
+        self.folder_path = folder_path
+        self.playlist = self._load_playlist()
+        self.current_index = 0
+        self.is_paused = False
 
-# 音楽フォルダのパス（適宜変更してください）
-MUSIC_FOLDER = "music"
+        if not self.playlist:
+            print(f"Error: No music files found in '{folder_path}'")
+            sys.exit()
 
-# フォルダ内の音楽ファイルを取得
-playlist = [f for f in os.listdir(MUSIC_FOLDER) if f.endswith(('maou_14_shining_star.ogg', 'maou_11_soreha_shinkiro_datta.ogg', 'maou_12.ogg'))]
-current_track = 0
+    def _load_playlist(self):
+        """サポートされている拡張子のファイルを自動取得"""
+        supported_ext = ('.mp3', '.ogg', '.wav')
+        if not os.path.exists(self.folder_path):
+            return []
+        return [f for f in os.listdir(self.folder_path) if f.lower().endswith(supported_ext)]
 
-# 音楽を再生する関数
-def play_music():
-    if playlist:
-        pygame.mixer.music.load(os.path.join(MUSIC_FOLDER, playlist[current_track]))
-        pygame.mixer.music.play()
+    def play(self):
+        track_path = os.path.join(self.folder_path, self.playlist[self.current_index])
+        try:
+            pygame.mixer.music.load(track_path)
+            pygame.mixer.music.play()
+            self.is_paused = False
+            print(f"Now Playing: {self.playlist[self.current_index]}")
+        except pygame.error as e:
+            print(f"Failed to play {track_path}: {e}")
 
-# 音楽を制御する関数
-def stop_music():
-    pygame.mixer.music.stop()
-
-def pause_music():
-    pygame.mixer.music.pause()
-
-def unpause_music():
-    pygame.mixer.music.unpause()
-
-def next_track():
-    global current_track
-    current_track = (current_track + 1) % len(playlist)
-    play_music()
-
-def prev_track():
-    global current_track
-    current_track = (current_track - 1) % len(playlist)
-    play_music()
-
-def set_volume(volume):
-    pygame.mixer.music.set_volume(volume)
-
-# メインループ
-print("Simple Music Player Commands:")
-print("P: Play, S: Stop, Space: Pause/Unpause, N: Next, B: Previous, Q: Quit")
-
-running = True
-play_music()
-while running:
-    command = input("Enter command: ").lower()
-    if command == 'p': 
-        play_music()
-    elif command == 's':
-        stop_music()
-    elif command == ' ':  # Space key for pause/unpause
-        if pygame.mixer.music.get_busy():
-            pause_music()
+    def toggle_pause(self):
+        if self.is_paused:
+            pygame.mixer.music.unpause()
+            self.is_paused = False
+            print("Resume")
         else:
-            unpause_music()
-    elif command == 'n':
-        next_track()
-    elif command == 'b':
-        prev_track()
-    elif command == 'q':
-        stop_music()
-        running = False
+            pygame.mixer.music.pause()
+            self.is_paused = True
+            print("Paused")
+
+    def stop(self):
+        pygame.mixer.music.stop()
+        print("Stopped")
+
+    def next(self):
+        self.current_index = (self.current_index + 1) % len(self.playlist)
+        self.play()
+
+    def prev(self):
+        self.current_index = (self.current_index - 1) % len(self.playlist)
+        self.play()
+
+def main():
+    # フォルダパスを指定
+    player = MusicPlayer(folder_path="musi")
+
+    print("\n=== Professional Music Player ===")
+    print("[P]Play  [S]Stop  [Space]Pause/Unpause")
+    print("[N]Next  [B]Prev  [Q]Quit")
+    print("=================================\n")
+
+    player.play()
+
+    while True:
+        # 入力待ち（標準入力）
+        command = input(">> ").lower().strip()
+
+        if command == 'p':
+            player.play()
+        elif command == 's':
+            player.stop()
+        elif command == ' ':
+            player.toggle_pause()
+        elif command == 'n':
+            player.next()
+        elif command == 'b':
+            player.prev()
+        elif command == 'q':
+            player.stop()
+            break
+        
+    pygame.quit()
+
+if __name__ == "__main__":
+    main()
